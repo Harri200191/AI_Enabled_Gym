@@ -1,1 +1,3 @@
-# AI_Enabled_Gym
+# AI Enabled Gym
+
+A solution using mediaPipe

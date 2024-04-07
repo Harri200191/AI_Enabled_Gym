@@ -3,11 +3,12 @@ import cv2
 import mediapipe as mp
 
 class BowlingActionAnalyser: 
-    def __init__(self, video, bowler):
+    def __init__(self, video, bowler, position = None):
         self.video = video
         self.bowler = bowler
         self.mp_drawing = mp.solutions.drawing_utils
         self.mp_pose = mp.solutions.pose
+        self.position = position
     
     def calculate_angle(self, a,b,c):
         a = np.array(a)
@@ -21,7 +22,12 @@ class BowlingActionAnalyser:
     
     def analyze(self): 
         state = 'OK'
-        cap = cv2.VideoCapture(self.video)   
+        if self.position == None:
+            pos = self.video
+        else:
+            pos = 0
+
+        cap = cv2.VideoCapture(pos)   
         with self.mp_pose.Pose(min_detection_confidence=0.5, min_tracking_confidence=0.5) as pose:
             while cap.isOpened():
                 ret, frame = cap.read() 

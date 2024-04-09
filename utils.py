@@ -3,12 +3,11 @@ import cv2
 import mediapipe as mp
 
 class BowlingActionAnalyser: 
-    def __init__(self, video, bowler ='right arm', position = None):
+    def __init__(self, video = None, bowler ='right arm'):
         self.video = video
         self.bowler = bowler
         self.mp_drawing = mp.solutions.drawing_utils
-        self.mp_pose = mp.solutions.pose
-        self.position = position
+        self.mp_pose = mp.solutions.pose 
     
     def calculate_angle(self, a,b,c):
         a = np.array(a)
@@ -22,10 +21,10 @@ class BowlingActionAnalyser:
     
     def analyze(self): 
         state = 'OK'
-        if self.position == None:
-            pos = self.video
-        else:
+        if self.video == None:
             pos = 0
+        else:
+            pos = self.video
 
         cap = cv2.VideoCapture(pos)   
         with self.mp_pose.Pose(min_detection_confidence=0.5, min_tracking_confidence=0.5) as pose:
@@ -121,13 +120,12 @@ class BowlingActionAnalyser:
 
             cap.release()
             cv2.destroyAllWindows()
-
 class GymExcerciseAnalyzer:
-    def __init__(self, video = None, position = 0):
+    def __init__(self, excercise, video = None):
         self.video = video 
         self.mp_drawing = mp.solutions.drawing_utils
-        self.mp_pose = mp.solutions.pose
-        self.position = position
+        self.mp_pose = mp.solutions.pose 
+        self.excercise = excercise
     
     def calculate_angle(self, a,b,c):
         a = np.array(a)
@@ -140,10 +138,10 @@ class GymExcerciseAnalyzer:
         return angle 
     
     def analyze(self): 
-        if self.video != None:
-            pos = self.video
+        if self.video == None:
+            pos = 0
         else:
-            pos = self.position
+            pos = self.video
 
         cap = cv2.VideoCapture(pos) 
         counter = 0 
@@ -157,57 +155,117 @@ class GymExcerciseAnalyzer:
                 results = pose.process(image) 
                 image.flags.writeable = True
                 image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR) 
-                try:
-                    landmarks = results.pose_landmarks.landmark 
-                    shoulder = [landmarks[self.mp_pose.PoseLandmark.LEFT_SHOULDER.value].x,landmarks[self.mp_pose.PoseLandmark.LEFT_SHOULDER.value].y]
-                    elbow = [landmarks[self.mp_pose.PoseLandmark.LEFT_ELBOW.value].x,landmarks[self.mp_pose.PoseLandmark.LEFT_ELBOW.value].y]
-                    wrist = [landmarks[self.mp_pose.PoseLandmark.LEFT_WRIST.value].x,landmarks[self.mp_pose.PoseLandmark.LEFT_WRIST.value].y]
+               
+                height, width, channels = image.shape
 
-                    r_shoulder = [landmarks[self.mp_pose.PoseLandmark.RIGHT_SHOULDER.value].x,landmarks[self.mp_pose.PoseLandmark.RIGHT_SHOULDER.value].y]
-                    r_elbow = [landmarks[self.mp_pose.PoseLandmark.RIGHT_ELBOW.value].x,landmarks[self.mp_pose.PoseLandmark.RIGHT_ELBOW.value].y]
-                    r_wrist = [landmarks[self.mp_pose.PoseLandmark.RIGHT_WRIST.value].x,landmarks[self.mp_pose.PoseLandmark.RIGHT_WRIST.value].y]
-                     
-                    angle = self.calculate_angle(shoulder, elbow, wrist)
-                    r_angle = self.calculate_angle(r_shoulder, r_elbow, r_wrist)
-                     
-                    cv2.putText(image, str(angle), 
-                                tuple(np.multiply(elbow, [640, 480]).astype(int)), 
-                                cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 2, cv2.LINE_AA
-                                        )
+                if (self.excercise=="Push-Ups"):    
+                    try:
+                        landmarks = results.pose_landmarks.landmark 
+                        shoulder = [landmarks[self.mp_pose.PoseLandmark.LEFT_SHOULDER.value].x,landmarks[self.mp_pose.PoseLandmark.LEFT_SHOULDER.value].y]
+                        elbow = [landmarks[self.mp_pose.PoseLandmark.LEFT_ELBOW.value].x,landmarks[self.mp_pose.PoseLandmark.LEFT_ELBOW.value].y]
+                        wrist = [landmarks[self.mp_pose.PoseLandmark.LEFT_WRIST.value].x,landmarks[self.mp_pose.PoseLandmark.LEFT_WRIST.value].y]
 
-                    cv2.putText(image, str(r_angle), 
-                                tuple(np.multiply(r_elbow, [640, 480]).astype(int)), 
-                                cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 2, cv2.LINE_AA
-                                        )        
-                    if angle > 160 and r_angle > 160:
-                        stage = "down"
-                    if (angle < 30 or r_angle < 30) and stage =='down':
-                        stage="up"
-                        counter +=1
-                        print(counter)
-                            
-                except:
-                    pass 
-                cv2.rectangle(image, (0, 0), (325, 73), (245, 117, 16), -1) 
-                cv2.putText(image, 'REPS', (15,12), 
-                            cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0,0,0), 1, cv2.LINE_AA)
-                cv2.putText(image, str(counter), 
-                            (10,60), 
-                            cv2.FONT_HERSHEY_SIMPLEX, 2, (255,255,255), 2, cv2.LINE_AA)
-                
-                cv2.rectangle(image, (130, 0), (250, 73), (245, 117, 16), -1) 
-                cv2.putText(image, 'STAGE', (95,12), 
-                            cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0,0,0), 1, cv2.LINE_AA)
-                cv2.putText(image, stage, 
-                            (90,60), 
-                            cv2.FONT_HERSHEY_SIMPLEX, 2, (255,255,255), 2, cv2.LINE_AA) 
-                
-                self.mp_drawing.draw_landmarks(image, results.pose_landmarks, self.mp_pose.POSE_CONNECTIONS,
-                                        self.mp_drawing.DrawingSpec(color=(245,117,66), thickness=2, circle_radius=2), 
-                                        self.mp_drawing.DrawingSpec(color=(245,66,230), thickness=2, circle_radius=2) 
-                                        )               
-                
-                cv2.imshow('Mediapipe Feed', image)
+                        r_shoulder = [landmarks[self.mp_pose.PoseLandmark.RIGHT_SHOULDER.value].x,landmarks[self.mp_pose.PoseLandmark.RIGHT_SHOULDER.value].y]
+                        r_elbow = [landmarks[self.mp_pose.PoseLandmark.RIGHT_ELBOW.value].x,landmarks[self.mp_pose.PoseLandmark.RIGHT_ELBOW.value].y]
+                        r_wrist = [landmarks[self.mp_pose.PoseLandmark.RIGHT_WRIST.value].x,landmarks[self.mp_pose.PoseLandmark.RIGHT_WRIST.value].y]
+                        
+                        angle = self.calculate_angle(shoulder, elbow, wrist)
+                        r_angle = self.calculate_angle(r_shoulder, r_elbow, r_wrist)    
+                        cv2.putText(image, str(angle), 
+                                    tuple(np.multiply(elbow, [width, height]).astype(int)), 
+                                    cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 2, cv2.LINE_AA
+                                            )
+
+                        cv2.putText(image, str(r_angle), 
+                                    tuple(np.multiply(r_elbow, [width, height]).astype(int)), 
+                                    cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 2, cv2.LINE_AA
+                                            )           
+                        
+                        if (angle>160 and r_angle>160):
+                            stage = "up"
+                        if (angle < 120 and r_angle < 120) and stage =='up':
+                            stage="down"
+                            counter +=1
+                            print(counter) 
+                    except:
+                        pass
+                     
+                    cv2.rectangle(image, (0, 0), (325, 73), (245, 117, 16), -1) 
+                    cv2.putText(image, 'REPS', (15,12), 
+                                cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0,0,0), 1, cv2.LINE_AA)
+                    cv2.putText(image, str(counter), 
+                                (10,60), 
+                                cv2.FONT_HERSHEY_SIMPLEX, 2, (255,255,255), 2, cv2.LINE_AA)
+                    
+                    cv2.rectangle(image, (130, 0), (250, 73), (245, 117, 16), -1)
+                     
+                    cv2.putText(image, 'STAGE', (95,12), 
+                                cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0,0,0), 1, cv2.LINE_AA)
+                    cv2.putText(image, stage, 
+                                (90,60), 
+                                cv2.FONT_HERSHEY_SIMPLEX, 2, (255,255,255), 2, cv2.LINE_AA)
+                     
+                    self.mp_drawing.draw_landmarks(image, results.pose_landmarks, self.mp_pose.POSE_CONNECTIONS,
+                                            self.mp_drawing.DrawingSpec(color=(245,117,66), thickness=2, circle_radius=2), 
+                                            self.mp_drawing.DrawingSpec(color=(245,66,230), thickness=2, circle_radius=2) 
+                                            )               
+                    
+                    cv2.imshow('Mediapipe Feed', image) 
+
+                elif (self.excercise=="Curls"): 
+                    try:
+                        landmarks = results.pose_landmarks.landmark 
+                        shoulder = [landmarks[self.mp_pose.PoseLandmark.LEFT_SHOULDER.value].x,landmarks[self.mp_pose.PoseLandmark.LEFT_SHOULDER.value].y]
+                        elbow = [landmarks[self.mp_pose.PoseLandmark.LEFT_ELBOW.value].x,landmarks[self.mp_pose.PoseLandmark.LEFT_ELBOW.value].y]
+                        wrist = [landmarks[self.mp_pose.PoseLandmark.LEFT_WRIST.value].x,landmarks[self.mp_pose.PoseLandmark.LEFT_WRIST.value].y]
+
+                        r_shoulder = [landmarks[self.mp_pose.PoseLandmark.RIGHT_SHOULDER.value].x,landmarks[self.mp_pose.PoseLandmark.RIGHT_SHOULDER.value].y]
+                        r_elbow = [landmarks[self.mp_pose.PoseLandmark.RIGHT_ELBOW.value].x,landmarks[self.mp_pose.PoseLandmark.RIGHT_ELBOW.value].y]
+                        r_wrist = [landmarks[self.mp_pose.PoseLandmark.RIGHT_WRIST.value].x,landmarks[self.mp_pose.PoseLandmark.RIGHT_WRIST.value].y]
+                        
+                        angle = self.calculate_angle(shoulder, elbow, wrist)
+                        r_angle = self.calculate_angle(r_shoulder, r_elbow, r_wrist) 
+                        angle = self.calculate_angle(shoulder, elbow, wrist)
+                        r_angle = self.calculate_angle(r_shoulder, r_elbow, r_wrist)
+                        cv2.putText(image, str(angle), 
+                                    tuple(np.multiply(elbow, [width, height]).astype(int)), 
+                                    cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 2, cv2.LINE_AA
+                                            )
+
+                        cv2.putText(image, str(r_angle), 
+                                    tuple(np.multiply(r_elbow, [width, height]).astype(int)), 
+                                    cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 2, cv2.LINE_AA
+                                            )        
+                        if angle > 160 and r_angle > 160:
+                            stage = "down"
+                        if (angle < 30 or r_angle < 30) and stage =='down':
+                            stage="up"
+                            counter +=1 
+                    except:
+                        pass
+                                 
+                    cv2.rectangle(image, (0, 0), (325, 73), (245, 117, 16), -1) 
+                    cv2.putText(image, 'REPS', (15,12), 
+                                cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0,0,0), 1, cv2.LINE_AA)
+                    cv2.putText(image, str(counter), 
+                                (10,60), 
+                                cv2.FONT_HERSHEY_SIMPLEX, 2, (255,255,255), 2, cv2.LINE_AA)
+                    
+                    cv2.rectangle(image, (130, 0), (250, 73), (245, 117, 16), -1) 
+                    cv2.putText(image, 'STAGE', (95,12), 
+                                cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0,0,0), 1, cv2.LINE_AA)
+                    cv2.putText(image, stage, 
+                                (90,60), 
+                                cv2.FONT_HERSHEY_SIMPLEX, 2, (255,255,255), 2, cv2.LINE_AA) 
+                    
+                    self.mp_drawing.draw_landmarks(image, results.pose_landmarks, self.mp_pose.POSE_CONNECTIONS,
+                                            self.mp_drawing.DrawingSpec(color=(245,117,66), thickness=2, circle_radius=2), 
+                                            self.mp_drawing.DrawingSpec(color=(245,66,230), thickness=2, circle_radius=2) 
+                                            )    
+                    cv2.imshow('Mediapipe Feed', image)           
+                else:
+                    print("Invalid Excercise Name. Please Enter 'Push-Ups' or 'Curls' as excercise name.")
+                    break
 
                 if cv2.waitKey(10) & 0xFF == ord('q'):
                     break

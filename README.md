@@ -31,4 +31,6 @@ Analyzer = BowlingActionAnalyser(video = 'Path of your video', bowler='right arm
 Analyzer.analyze()
 ```
 
+5) Follow the example usage given in the main.ipynb file to run the project
+
 I hope you enjoy using the tool!
